@@ -2,10 +2,6 @@
     text-align: left;
 }
 
-.deviceGroup tr:hover {
-    cursor: pointer;
-}
-
 .listPage {
     margin-top: 20px;
 }
@@ -25,30 +21,26 @@
     float: left;
 }
 
-.leftAligned1 button {
-    margin-left: 0;
-}
-
 .rightAligned1 {
     text-align: right;
     float: right;
-}
-
-.rightAligned1 button {
-    margin-right: 0;
 }
 
 .clickable:hover {
     cursor: pointer;
 }
 
-.form-control {
-    box-shadow: 0px 2px 5px 0px rgba(0,0,0,0);
+input[type='checkbox'] {
+    -webkit-appearance:none;
+    width: 17px;
+    height: 17px;
+    background: white;
+    border: 1px solid #868988;
+    border-radius: 15px;
+    cursor: pointer;
 }
-
-.hilit {
-    color: rgb(255, 126, 87) !important;
-    font-weight: bold;
+input[type='checkbox']:checked {
+    background: #0093FF;
 }
 
 .pages {
@@ -57,5 +49,10 @@
 
 .pages:hover {
     color: #0322ff;
+    cursor: pointer;
+}
+
+.tableHeader:hover {
+    box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.1);
     cursor: pointer;
 }

@@ -1,7 +1,11 @@
 import React, { Component } from 'react';
-import {Button } from 'react-bootstrap';
+import {Button, ButtonGroup, Dropdown} from 'react-bootstrap';
 import '../../../../../node_modules/react-gh-like-diff/lib/diff2html.css';
 import CodeMirror from 'react-codemirror'
+import 'codemirror/addon/fold/foldcode'
+import 'codemirror/addon/fold/foldgutter'
+import 'codemirror/addon/fold/foldgutter.css'
+import 'codemirror/addon/fold/brace-fold'
 import '../DeviceView.css'
 import './Codemirror.css'
 require('codemirror/mode/javascript/javascript');
@@ -76,13 +80,22 @@ class Editor extends Component {
                 <div>
                     <h2 style={{display: "inline-block", marginTop: "5px"}}>{this.props.title}</h2>
                     <div style={{float: "right"}}>
-                        <Button className="btn btn-primary" onClick={this.sendConfig.bind(this)} style={{marginLeft: '5px'}}>
+                        <Button className="btn btn-primary gradientBtn" onClick={this.sendConfig.bind(this)} style={{marginLeft: '5px'}}>
                             <i className="fas fa-save"/>&nbsp;&nbsp;Save</Button>
                         {this.props.editable === "cap" ? null :
-                            <Button className="btn btn-light" onClick={this.refresh.bind(this)}
-                                    style={{marginLeft: '5px'}}>
-                                &nbsp;&nbsp;{this.state.modified ? "Cancel" : "Refresh"}
-                            </Button>
+
+                            <Dropdown as={ButtonGroup}>
+                                <Button className="btn btn-light" onClick={this.refresh.bind(this)} style={{marginLeft: '5px'}}>
+                                    &nbsp;&nbsp;{this.state.modified ? "Cancel" : "Refresh"}
+                                </Button>
+                                {!this.state.modified ?
+                                    <div>
+                                    <Dropdown.Toggle split variant="btn btn-light" id="dropdown-split-basic" />
+                                    <Dropdown.Menu>
+                                    <Dropdown.Item onClick={this.props.replaceConfig}>Replace with Operational</Dropdown.Item>
+                                    </Dropdown.Menu>
+                                    </div> : null}
+                            </Dropdown>
                         }
                     </div>
                 </div>
@@ -90,7 +103,7 @@ class Editor extends Component {
                 <div>
                     <h2 style={{display: "inline-block", marginTop: "5px"}}>{this.props.title}</h2>
                     <div style={{float: "right"}}>
-                        <Button className="btn btn-primary" style={{marginRight: '5px'}}
+                        <Button className="btn btn-primary gradientBtn" style={{marginRight: '5px'}}
                                 disabled={this.props.syncing}
                                 onClick={this.props.syncFromNetwork}>
                             <i className={this.props.syncing ? "fas fa-sync fa-spin" : "fas fa-sync"}/>
@@ -121,7 +134,9 @@ class Editor extends Component {
 
                 <CodeMirror ref={el => this.cm = el} value={this.state.inputJSON}
                             onChange={this.updateJson.bind(this)}
-                            options={{mode: 'application/ld+json', lineNumbers: true, readOnly: !this.props.editable}}/>
+                            options={{mode: 'application/ld+json', lineNumbers: true, readOnly: !this.props.editable,
+                                foldGutter: true, gutters:["CodeMirror-linenumbers", "CodeMirror-foldgutter"]}
+                            }/>
             </div>
         )
     };

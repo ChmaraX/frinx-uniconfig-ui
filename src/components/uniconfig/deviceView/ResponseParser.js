@@ -7,6 +7,7 @@ export function parseResponse(type, body) {
         case "sync": return parseSync(type, bodyJSON);
         case "commit": return parseCommit(type, bodyJSON);
         case "replacesnap": return parseReplaceSnap(type, bodyJSON);
+        case "replaceconf": return parseReplaceConf(type, bodyJSON);
         default: break;
     }
 }
@@ -26,16 +27,17 @@ function parseDryRun(type, bodyJSON) {
 }
 
 function parseSync(type, bodyJSON) {
-    let {nodeId, status} = "";
+    let {nodeId, status, errorMessage} = "";
     if (bodyJSON["output"]["node-sync-status-results"]["node-sync-status-result"]){
         nodeId = bodyJSON["output"]["node-sync-status-results"]["node-sync-status-result"][0]["nodeId"];
-        status = "updated with changes"
+        status = "updated with changes";
+        errorMessage =  bodyJSON["output"]["node-sync-status-results"]["node-sync-status-result"][0]["error-message"];
     } else if (bodyJSON["output"]["node-sync-status-results"]) {
         status = "without changes"
     } else {
         status = "error"
     }
-    return {type, nodeId, status}
+    return {type, nodeId, status, errorMessage}
 }
 
 function parseCommit(type, bodyJSON) {
@@ -53,6 +55,14 @@ function parseCommit(type, bodyJSON) {
 }
 
 function parseReplaceSnap(type, bodyJSON) {
+    let status = "";
+    if (bodyJSON["output"]) {
+        status = bodyJSON["output"]["result"];
+    }
+    return {type, status}
+}
+
+function parseReplaceConf(type, bodyJSON) {
     let status = "";
     if (bodyJSON["output"]) {
         status = bodyJSON["output"]["result"];

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import {Button, Form, Modal, Row, Col, Tabs, Tab, InputGroup, ButtonGroup} from "react-bootstrap";
 import Dropdown from 'react-dropdown';
+import './MountModal.css'
 import 'react-dropdown/style.css';
 import {
     mountCliTemplate,
@@ -93,27 +94,32 @@ class MountModal extends Component {
                 this.setState({mountType: "Netconf"})
             }
 
-            http.get("/api/odl/get/conf/status/" + topology + "/" + device).then(res => {
-                let values = Object.entries(res["node"][0]);
-                let mountForm = topology === "cli" ?
-                    JSON.parse("[" + mountCliTemplate + "]")[0] : JSON.parse("[" + mountNetconfTemplate + "]")[0];
-                Object.entries(mountForm).map(field => {
-                    values.forEach(value => {
-                        if (field[0].split(":").pop() === value[0].split(":").pop()) {
-                            mountForm[field[0]][0] = value[1];
-                        }
+            http.get("/api/odl/conf/status/" + topology + "/" + device).then(res => {
+                try {
+                    let values = Object.entries(res["node"][0]);
+                    let mountForm = topology === "cli" ?
+                        JSON.parse("[" + mountCliTemplate + "]")[0] : JSON.parse("[" + mountNetconfTemplate + "]")[0];
+                    Object.entries(mountForm).map(field => {
+                        values.forEach(value => {
+                            if (field[0].split(":").pop() === value[0].split(":").pop()) {
+                                mountForm[field[0]][0] = value[1];
+                            }
+                        });
+                        return null;
                     });
-                    return null;
-                });
 
-                if (topology === "cli") {
-                    this.setState({mountCliForm: mountForm
-                    })
-                } else {
-                    this.setState({
-                        mountNetconfForm: mountForm,
-                        mountType: "Netconf"
-                    })
+                    if (topology === "cli") {
+                        this.setState({
+                            mountCliForm: mountForm
+                        })
+                    } else {
+                        this.setState({
+                            mountNetconfForm: mountForm,
+                            mountType: "Netconf"
+                        })
+                    }
+                } catch (e) {
+                    console.log(e)
                 }
             })
         }
@@ -176,12 +182,12 @@ class MountModal extends Component {
             connectionStatus: "Sending Whitelist ..."
         });
         let target = this.state.nativeDevice.toLowerCase();
-        return http.put("/api/odl/put/conf/native/whitelist/" + target, this.state.whitelist).then( res => {
+        return http.put("/api/odl/conf/native/whitelist/" + target, this.state.whitelist).then( res => {
             if (this.state.enableBlacklist) {
                 this.setState({
                     connectionStatus: "Sending Blacklist ..."
                 });
-                return http.put("/api/odl/put/conf/native/blacklist/" + target, this.state.blacklist).then(res2 => {
+                return http.put("/api/odl/conf/native/blacklist/" + target, this.state.blacklist).then(res2 => {
                     return res2.body.status === 200;
                 })
             } else {
@@ -200,7 +206,7 @@ class MountModal extends Component {
     }
 
     getConnectionStatus(topology, node) {
-        http.get("/api/odl/get/oper/status/" + topology + "/" + node).then(res => {
+        http.get("/api/odl/oper/status/" + topology + "/" + node).then(res => {
             let connectionStatus = res;
             if (res === 404) {
                 connectionStatus = "connecting";
@@ -224,10 +230,14 @@ class MountModal extends Component {
     }
 
     getSupportedDevices() {
-        http.get('/api/odl/get/oper/registry/cli-devices/').then(res => {
-            let objArray = Object.values(Object.entries(res)[0][1]);
-            objArray = [...objArray[0]];
-            this.setState({deviceTypeVersion: objArray})
+        http.get('/api/odl/oper/registry/cli-devices/').then(res => {
+            try {
+                let objArray = Object.values(Object.entries(res)[0][1]);
+                objArray = [...objArray[0]];
+                this.setState({deviceTypeVersion: objArray})
+            } catch (e) {
+                console.log(e);
+            }
         });
     }
 
@@ -438,11 +448,11 @@ class MountModal extends Component {
                         <Button onClick={() => this.handleToggle(0)}
                                 style={{width: "50%"}}
                                 active={this.state.activeToggles.includes(0) ? "active" : null} className="noshadow"
-                                variant="outline-info">Lazy Connection</Button>
+                                variant="outline-info-toggle">Lazy Connection</Button>
                         <Button onClick={() => this.handleToggle(1)}
                                 style={{width: "50%"}}
                                 active={this.state.activeToggles.includes(1) ? "active" : null} className="noshadow"
-                                variant="outline-info">Dry-run</Button>
+                                variant="outline-info-toggle">Dry-run</Button>
                     </ButtonGroup>
                     : null
             )
@@ -455,15 +465,15 @@ class MountModal extends Component {
                         <Button onClick={() => this.handleToggle(0)}
                                 style={{width: "50%"}}
                                 active={this.state.activeToggles.includes(0) ? "active" : null} className="noshadow"
-                                variant="outline-info">Override capabilities</Button>
+                                variant="outline-info-toggle">Override capabilities</Button>
                         <Button onClick={() => this.handleToggle(1)}
                                 style={{width: "50%"}}
                                 active={this.state.activeToggles.includes(1) ? "active" : null} className="noshadow"
-                                variant="outline-info">Dry-run</Button>
+                                variant="outline-info-toggle">Dry-run</Button>
                         <Button onClick={() => this.setState({nativeUc: !this.state.nativeUc})}
                                 style={{width: "50%"}}
                                 active={this.state.nativeUc ? "active" : null} className="noshadow"
-                                variant="outline-info">UniConfig Native</Button>
+                                variant="outline-info-toggle">UniConfig Native</Button>
                     </ButtonGroup>
                     : null
             )

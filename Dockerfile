@@ -1,14 +1,22 @@
 
 FROM node:8.9-alpine
 
+ARG ODL
+ARG WF_SERVER
+
 # Create a work directory and copy dependency files.
-RUN mkdir /app
+COPY ["package.json", "package-lock.json*", "/tmp/"]
+RUN cd /tmp && npm install --silent
+
+
+RUN mkdir /app && cp -r /tmp/node_modules /app
+
 WORKDIR /app
-COPY /src /app/src
-COPY ["package.json", "package-lock.json*", "./"]
+COPY . /app
 
-# Building modules
-RUN npm install --silent && mv node_modules ../
+RUN sed -i 's,.*ODL_HOST=.*,ODL_HOST='"http://""${ODL}"',' ./.env
+RUN sed -i 's,.*WF_SERVER=.*,WF_SERVER='"http://""${WF_SERVER}/api/"',' ./.env
 
-# Expose PORT 3000 on virtual machine
 EXPOSE 3000
+
+CMD ["npm","run","dev"]

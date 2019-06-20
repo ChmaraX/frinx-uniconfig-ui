@@ -2,7 +2,7 @@ import React, {Component} from 'react';
 import { ReactGhLikeDiff } from 'react-gh-like-diff';
 import Editor from "./editor/Editor";
 import './DeviceView.css'
-import {Badge, Button, Col, Container, Dropdown, Form, Row, Spinner } from "react-bootstrap";
+import {Badge, Button, ButtonGroup, Col, Container, Dropdown, Form, Row, Spinner} from "react-bootstrap";
 import DropdownMenu from "./dropdownMenu/DropdownMenu";
 import SnapshotModal from "./snapshotModal/SnapshotModal";
 import CustomAlerts from "../customAlerts/CustomAlerts";
@@ -52,14 +52,14 @@ class DeviceView extends Component {
 
     fetchData(device){
 
-        http.get('/api/odl/get/conf/uniconfig/' + device).then(res => {
+        http.get('/api/odl/conf/uniconfig/' + device).then(res => {
             this.setState({
                 config: JSON.stringify(res),
                 initializing: false
             })
         });
 
-        http.get('/api/odl/get/oper/uniconfig/' + device).then(res => {
+        http.get('/api/odl/oper/uniconfig/' + device).then(res => {
             this.setState({
                 operational: JSON.stringify(res),
                 initializing: false
@@ -69,7 +69,7 @@ class DeviceView extends Component {
 
     updateConfig(newData) {
         let data = JSON.parse(JSON.stringify(newData, null, 2));
-        http.put('/api/odl/put/conf/uniconfig/' + this.state.device, data).then(res => {
+        http.put('/api/odl/conf/uniconfig/' + this.state.device, data).then(res => {
             this.setState({
                 alertType: `putConfig${res.body.status}`,
                 console: JSON.stringify(res.body, null, 2),
@@ -89,11 +89,21 @@ class DeviceView extends Component {
         });
     }
 
+    getCalculatedDiff() {
+        let target = JSON.stringify({"input": {"target-nodes": {"node": [this.state.device]}}});
+        http.post('/api/odl/operations/calculate-diff/', target).then(res => {
+            this.setState({
+                console: res.body.text,
+                operation: "Calculated Diff"
+            });
+            this.animateConsole();
+        })
+    }
+
     commitToNetwork(){
         this.setState({commiting: true});
         let target = JSON.parse(JSON.stringify({"input": {"target-nodes": {"node": [this.state.device]}}}));
-        http.post('/api/odl/post/operations/commit/', target).then(res => {
-            console.log(res);
+        http.post('/api/odl/operations/commit/', target).then(res => {
             this.setState({
                 alertType: parseResponse("commit", res.body.text),
                 showAlert: true,
@@ -102,7 +112,7 @@ class DeviceView extends Component {
                 operation: "Commit to Network"
             });
             this.animateConsole();
-            http.get('/api/odl/get/oper/uniconfig/' + this.state.device).then(res => {
+            http.get('/api/odl/oper/uniconfig/' + this.state.device).then(res => {
                 this.setState({
                     operational: JSON.stringify(res),
                 });
@@ -112,7 +122,7 @@ class DeviceView extends Component {
 
     dryRun() {
         let target = JSON.parse(JSON.stringify({"input": {"target-nodes": {"node": [this.state.device]}}}));
-        http.post('/api/odl/post/operations/dryrun/', target).then(res => {
+        http.post('/api/odl/operations/dry-run/', target).then(res => {
             this.setState({
                 alertType: parseResponse("dryrun", res.body.text),
                 showAlert: true,
@@ -120,7 +130,10 @@ class DeviceView extends Component {
                 operation: "Dry-run"
             });
             this.animateConsole();
-        })
+            if (!this.state.alertType["errorMessage"] && this.state.console) {
+                this.consoleHandler();
+            }
+        });
     }
 
     animateConsole() {
@@ -134,8 +147,8 @@ class DeviceView extends Component {
         this.setState({syncing: true});
         let target = JSON.stringify({"input": {"target-nodes": {"node": [this.state.device]}}});
 
-        http.post('/api/odl/post/operations/syncfromnetwork', target).then((res_first) => {
-            http.get('/api/odl/get/oper/uniconfig/' + this.state.device).then(res => {
+        http.post('/api/odl/operations/sync-from-network', target).then((res_first) => {
+            http.get('/api/odl/oper/uniconfig/' + this.state.device).then(res => {
                 this.setState({
                     alertType: parseResponse("sync", res_first.body.text),
                     showAlert: true,
@@ -151,15 +164,30 @@ class DeviceView extends Component {
     }
 
     refreshConfig(){
-        http.get('/api/odl/get/conf/uniconfig/' + this.state.device).then(res => {
+        http.get('/api/odl/conf/uniconfig/' + this.state.device).then(res => {
             this.setState({
                 config: JSON.stringify(res),
             })
         });
     }
 
+    replaceConfig() {
+        let target = JSON.stringify({"input": {"target-nodes": {"node": [this.state.device]}}});
+        http.post('/api/odl/operations/replace-config-with-operational', target).then(res => {
+            console.log(res);
+            this.refreshConfig();
+            this.setState({
+                alertType: parseResponse("replaceconf", res.body.text),
+                showAlert: true,
+                console: res.body.text,
+                operation: "Replace-config-with-operational"
+            });
+            this.animateConsole()
+        })
+    }
+
     getSnapshots(){
-        http.get('/api/odl/get/conf/snapshots/' + this.state.device).then(res => {
+        http.get('/api/odl/conf/snapshots/' + this.state.device).then(res => {
             if(res !== 500) {
                 this.setState({
                     snapshots: res
@@ -173,7 +201,7 @@ class DeviceView extends Component {
         let snapshotName = this.state.snapshots[snapshotId]["topology-id"];
         if (this.state.deletingSnaps) {
             let target = JSON.parse(JSON.stringify({"input": {"name": snapshotName } } ) );
-            http.post('/api/odl/post/conf/snapshots/delete', target).then(res => {
+            http.post('/api/odl/conf/snapshots/delete-snapshot', target).then(res => {
                 console.log(res);
             })
         } else {
@@ -183,8 +211,8 @@ class DeviceView extends Component {
                     "target-nodes": {"node": [this.state.device]}
                 }
             });
-            http.post('/api/odl/post/operations/replacesnapshot', target).then(res_first => {
-                http.get('/api/odl/get/conf/snapshots/' + snapshotName + '/' + this.state.device).then(res => {
+            http.post('/api/odl/operations/replace-config-with-snapshot', target).then(res_first => {
+                http.get('/api/odl/conf/snapshots/' + snapshotName + '/' + this.state.device).then(res => {
                     this.setState({
                         alertType: parseResponse("replacesnap", res_first.body.text),
                         showAlert: true,
@@ -250,8 +278,9 @@ class DeviceView extends Component {
                     :
                     <Editor title="Intended Configuration" editable={true} deviceName={this.state.device}
                             updateConfig={this.updateConfig.bind(this)}
-                            inputJSON={configJSON}
-                            refreshConfig={this.refreshConfig.bind(this)}/>
+                            replaceConfig={this.replaceConfig.bind(this)}
+                            refreshConfig={this.refreshConfig.bind(this)}
+                            inputJSON={configJSON}/>
                 }
             </div>
         );
@@ -293,10 +322,15 @@ class DeviceView extends Component {
                             </Col>
                             <Col md={5} className="child">
                                 <Form.Group className="rightAligned">
-                                    <Button variant={this.state.showDiff ? "light" : "outline-light"}
-                                            onClick={this.showDiff.bind(this)}>
-                                        <i className="fas fa-exchange-alt"/>&nbsp;&nbsp;{this.state.showDiff ? 'Hide Diff' : 'Show Diff'}
-                                    </Button>
+                                    <Dropdown as={ButtonGroup}>
+                                        <Button variant={this.state.showDiff ? "light" : "outline-light"} onClick={this.showDiff.bind(this)}>
+                                            <i className="fas fa-exchange-alt"/>&nbsp;&nbsp;{this.state.showDiff ? 'Hide Diff' : 'Show Diff'}
+                                        </Button>
+                                        <Dropdown.Toggle split variant="outline-light" id="dropdown-split-basic" />
+                                        <Dropdown.Menu>
+                                            <Dropdown.Item onClick={this.getCalculatedDiff.bind(this)}>Get calculated diff</Dropdown.Item>
+                                        </Dropdown.Menu>
+                                    </Dropdown>
                                     <Button variant="outline-light" onClick={this.dryRun.bind(this)}>
                                         <i className="fas fa-play"/>&nbsp;&nbsp;Dry run</Button>
                                     <Button variant="outline-light" onClick={this.commitToNetwork.bind(this)}>
