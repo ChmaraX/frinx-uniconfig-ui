@@ -1,10 +1,11 @@
-import React, {Component, Fragment} from 'react';
+import React, {Component} from 'react';
 import {Accordion, Button, Card, Col, Form, Row, Table} from 'react-bootstrap'
 import {Typeahead} from 'react-bootstrap-typeahead';
 import 'react-bootstrap-typeahead/css/Typeahead.css';
 import './WorkflowDefs.css'
-import DefinitionModal from "../../definitonModal/DefinitionModal";
-import InputModal from "../../inputModal/InputModal";
+import DefinitionModal from "./DefinitonModal/DefinitionModal";
+import InputModal from "./InputModal/InputModal";
+import DiagramModal from "./DiagramModal/DiagramModal";
 
 const http = require('../../../../server/HttpServerSide').HttpClient;
 
@@ -18,7 +19,8 @@ class WorkflowDefs extends Component {
             table: [],
             activeRow: null,
             activeWf: null,
-            defModal: false
+            defModal: false,
+            diagramModal: false,
         };
         this.table = React.createRef();
         this.onEditSearch = this.onEditSearch.bind(this);
@@ -92,6 +94,13 @@ class WorkflowDefs extends Component {
         });
     }
 
+    updateFavourite(data) {
+        data.description = data.description.includes(", FAVOURITE")
+            ? data.description.replace(", FAVOURITE","")
+            : data.description += ", FAVOURITE";
+        http.put('/api/conductor/metadata/', [data]);
+    }
+
     repeat() {
         let output = [];
         let dataset;
@@ -109,9 +118,14 @@ class WorkflowDefs extends Component {
                     <Accordion.Collapse eventKey={i}>
                         <Card.Body style={{padding: "0px"}}>
                             <div style={{background: "linear-gradient(-120deg, rgb(0, 147, 255) 0%, rgb(0, 118, 203) 100%)", padding: "15px", marginBottom: "10px"}}>
-                                <Button variant="outline-light noshadow" onClick={this.showInputModal.bind(this,i)}>Input</Button>
-                                <Button variant="outline-light noshadow" onClick={this.showDefinitionModal.bind(this,i)}>Definition</Button>
-                                <Button variant="outline-light noshadow">Diagram</Button>
+                                <Button variant="outline-light noshadow" onClick={this.showInputModal.bind(this)}>Input</Button>
+                                <Button variant="outline-light noshadow" onClick={this.showDefinitionModal.bind(this)}>Definition</Button>
+                                <Button variant="outline-light noshadow" onClick={this.showDiagramModal.bind(this)}>Diagram</Button>
+                                <Button variant="outline-light noshadow" onClick={this.updateFavourite.bind(this,dataset[i])}>
+                                    <i className={dataset[i]["description"].includes("FAVOURITE") ? 'fa fa-star' : 'far fa-star'}
+                                       style={{ cursor: 'pointer'}}
+                                    />
+                                </Button>
                             </div>
                             <div className="accordBody">
                                 <b>{dataset[i]["description"] ? "Description" : null}</b><br/>
@@ -155,6 +169,13 @@ class WorkflowDefs extends Component {
         })
     }
 
+    showDiagramModal() {
+        this.setState({
+            diagramModal: !this.state.diagramModal
+        })
+    }
+
+
     render(){
 
         let definitionModal = this.state.defModal ?
@@ -165,10 +186,15 @@ class WorkflowDefs extends Component {
             <InputModal wf={this.state.activeWf} modalHandler={this.showInputModal.bind(this)}
                         show={this.state.inputModal}/> : null;
 
+        let diagramModal = this.state.diagramModal ?
+            <DiagramModal wf={this.state.activeWf} modalHandler={this.showDiagramModal.bind(this)}
+                          show={this.state.diagramModal}/> : null;
+
         return (
          <div>
              {definitionModal}
              {inputModal}
+             {diagramModal}
              <Row>
                  <Col>
                      <Typeahead
